@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 
@@ -155,8 +156,16 @@ func (a *App) rebuildAndHook(ctx context.Context, rt rebuild.Runtime, v rebuild.
 	if err != nil || v != rebuild.Switch {
 		return err
 	}
-	for _, hook := range rt.Config.PostSwitch {
-		if err := a.runHook(ctx, rt, hook, path, opts.Verbose); err != nil {
+	return a.postSwitch(ctx, rt, path, opts.Verbose)
+}
+
+func (a *App) postSwitch(ctx context.Context, rt rebuild.Runtime, generation string, verbose bool) error {
+	activated, err := config.Load(a.cfgPath, os.Getenv)
+	if err != nil {
+		return fmt.Errorf("loading the post-switch hooks of generation %s: %w", generation, err)
+	}
+	for _, hook := range activated.PostSwitch {
+		if err := a.runHook(ctx, rt, hook, generation, verbose); err != nil {
 			return fmt.Errorf("post-switch hook %q: %w", hook.Description, err)
 		}
 	}

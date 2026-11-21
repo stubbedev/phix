@@ -41,6 +41,7 @@ type App struct {
 	console  ui.Console
 	terminal Terminal
 	cfg      config.Config
+	cfgPath  string
 	cfgErr   error
 	attr     string
 	profile  func(config.Platform) string
@@ -86,6 +87,7 @@ func New(streams proc.Streams, terminal Terminal) *App {
 	}
 	path, err := config.DefaultPath(os.Getenv)
 	if err == nil {
+		a.cfgPath = path
 		a.cfg, err = config.Load(path, os.Getenv)
 	}
 	a.cfgErr = err

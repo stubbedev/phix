@@ -709,6 +709,42 @@ func TestPostSwitchHook(t *testing.T) {
 	}
 }
 
+func TestPostSwitchRunsTheActivatedGenerationsHooks(t *testing.T) {
+	dir := t.TempDir()
+	hook := func(name string) string {
+		script := filepath.Join(dir, name)
+		body := "#!/bin/sh\ntouch " + filepath.Join(dir, name+".ran") + "\n"
+		if err := os.WriteFile(script, []byte(body), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		return script
+	}
+	previous, activated := hook("previous"), hook("activated")
+	newHarnessWith(t, []map[string]any{{"description": "Pushing", "exec": previous}})
+	app := New(proc.Streams{Stdin: strings.NewReader(""), Stdout: io.Discard, Stderr: io.Discard}, Terminal{})
+	rt, err := app.runtime()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfgPath := os.Getenv("PHIX_CONFIG")
+	cfg, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfgPath, bytes.ReplaceAll(cfg, []byte(previous), []byte(activated)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.postSwitch(t.Context(), rt, "/nix/store/gen", false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(activated + ".ran"); err != nil {
+		t.Errorf("the activated generation's hook did not run: %v", err)
+	}
+	if _, err := os.Stat(previous + ".ran"); err == nil {
+		t.Error("the previous generation's hook ran")
+	}
+}
+
 func TestTrustPostQuantumAndSSHRecipients(t *testing.T) {
 	requireTools(t, "sops", "age", "age-keygen", "ssh-to-age", "ssh-keygen")
 	h := newHarness(t)
