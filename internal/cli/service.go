@@ -564,11 +564,10 @@ func (a *App) serviceExecCmd() *cobra.Command {
 				spec.IOPriority = &ioPriority
 			}
 			if flags.Changed("umask") {
-				m, err := strconv.ParseUint(umask, 8, 32)
+				mask, err := unit.ParseUMask(umask)
 				if err != nil {
-					return usage.Errorf("--umask %q is not an octal mask", umask)
+					return usage.Errorf("--umask: %w", err)
 				}
-				mask := int(m)
 				spec.UMask = &mask
 			}
 			return supervisor.Exec(spec, args[0], args[1:])

@@ -335,13 +335,10 @@ func (b *builder) applyService(key, value string) (bool, error) {
 	case "IOSchedulingPriority":
 		s.IOSchedulingPriority, err = parseRange(value, 0, 7)
 	case "UMask":
-		var m uint64
-		m, err = strconv.ParseUint(value, 8, 32)
-		if err == nil && m > 0o777 {
-			err = fmt.Errorf("UMask=%s is above 0777", value)
+		var mask UMask
+		if mask, err = ParseUMask(value); err == nil {
+			s.UMask = &mask
 		}
-		mask := int(m)
-		s.UMask = &mask
 	case "RuntimeDirectory":
 		err = b.directories(&s.Directories.Runtime, value)
 	case "StateDirectory":

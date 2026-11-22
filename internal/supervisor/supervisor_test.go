@@ -96,14 +96,19 @@ func execHelper(args []string) {
 			args = args[1:]
 			continue
 		}
-		n, err := strconv.ParseInt(args[1], 8, 32)
-		if args[0] != "--umask" {
-			n, err = strconv.ParseInt(args[1], 10, 32)
+		if args[0] == "--umask" {
+			mask, err := unit.ParseUMask(args[1])
+			if err != nil {
+				os.Exit(4)
+			}
+			spec.UMask = &mask
+			args = args[2:]
+			continue
 		}
+		v, err := strconv.Atoi(args[1])
 		if err != nil {
 			os.Exit(4)
 		}
-		v := int(n)
 		switch args[0] {
 		case "--nice":
 			spec.Nice = &v
@@ -111,8 +116,6 @@ func execHelper(args []string) {
 			spec.IOClass = &v
 		case "--io-priority":
 			spec.IOPriority = &v
-		case "--umask":
-			spec.UMask = &v
 		}
 		args = args[2:]
 	}

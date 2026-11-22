@@ -194,3 +194,13 @@ func TestSystemctlAndJournalctlShims(t *testing.T) {
 		t.Errorf("systemctl without --user exited %d, want 2", code)
 	}
 }
+
+func TestServiceExecRejectsOutOfRangeUMask(t *testing.T) {
+	h := newHarness(t)
+	for _, mask := range []string{"1000", "40000000000", "9", "-1"} {
+		_, errOut, code := h.run("", "service", "exec", "--umask", mask, "--", "/bin/true", "true")
+		if code != 2 || !strings.Contains(errOut, `"`+mask+`"`) {
+			t.Errorf("service exec --umask %s: exit %d, stderr %q; want exit 2 naming the mask", mask, code, errOut)
+		}
+	}
+}

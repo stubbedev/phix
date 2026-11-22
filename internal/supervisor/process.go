@@ -149,7 +149,7 @@ type attributes struct {
 	nice      *int
 	ioClass   *int
 	ioPrio    *int
-	umask     *int
+	umask     *unit.UMask
 	listenPID bool
 }
 
@@ -172,7 +172,7 @@ func (a attributes) helperArgs() []string {
 		args = append(args, "--io-priority", strconv.Itoa(*a.ioPrio))
 	}
 	if a.umask != nil {
-		args = append(args, "--umask", strconv.FormatInt(int64(*a.umask), 8))
+		args = append(args, "--umask", a.umask.String())
 	}
 	return args
 }

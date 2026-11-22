@@ -5,13 +5,15 @@ import (
 	"os"
 	"strconv"
 	"syscall"
+
+	"github.com/stubbedev/phix/internal/unit"
 )
 
 type ExecSpec struct {
 	Nice       *int
 	IOClass    *int
 	IOPriority *int
-	UMask      *int
+	UMask      *unit.UMask
 	ListenPID  bool
 }
 
@@ -22,7 +24,7 @@ func Exec(spec ExecSpec, path string, argv []string) error {
 		}
 	}
 	if spec.UMask != nil {
-		syscall.Umask(*spec.UMask)
+		syscall.Umask(spec.UMask.Int())
 	}
 	if spec.Nice != nil {
 		if err := syscall.Setpriority(syscall.PRIO_PROCESS, 0, *spec.Nice); err != nil {

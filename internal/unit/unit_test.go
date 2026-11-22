@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -439,5 +440,43 @@ func TestNamedExitStatuses(t *testing.T) {
 	}
 	if !slices.Equal(set.Codes, []int{65, 3}) || !slices.Equal(set.Signals, []syscall.Signal{syscall.SIGUSR1}) {
 		t.Errorf("exit set = %+v", set)
+	}
+}
+
+func TestParseUMask(t *testing.T) {
+	for in, want := range map[string]UMask{"0": 0, "022": 0o22, "0077": 0o77, "777": 0o777} {
+		got, err := ParseUMask(in)
+		if err != nil || got != want {
+			t.Errorf("ParseUMask(%q) = %o, %v; want %o", in, got, err, want)
+		}
+		if round, err := ParseUMask(got.String()); err != nil || round != got {
+			t.Errorf("ParseUMask(%q.String()) = %o, %v; want %o", in, round, err, got)
+		}
+	}
+	for _, in := range []string{"1000", "7777", "37777777777", "77777777777777777777777", "-1", "8", "", "0x12"} {
+		if got, err := ParseUMask(in); err == nil || !strings.Contains(err.Error(), strconv.Quote(in)) {
+			t.Errorf("ParseUMask(%q) = %o, %v; want an error naming the input", in, got, err)
+		}
+	}
+}
+
+func TestUMaskDirective(t *testing.T) {
+	tr := newTree(t)
+	tr.install("masked.service", "[Service]\nExecStart=/bin/true\nUMask=0027\n", "default.target")
+	tr.install("wide.service", "[Service]\nExecStart=/bin/true\nUMask=1000\n", "default.target")
+	tr.install("huge.service", "[Service]\nExecStart=/bin/true\nUMask=40000000000\n", "default.target")
+
+	set := tr.load()
+	masked := set.Units[name(t, "masked.service")]
+	if masked == nil {
+		t.Fatalf("masked.service failed to load: %v", set.Errors[name(t, "masked.service")])
+	}
+	if got := masked.Service.UMask; got == nil || *got != 0o27 {
+		t.Errorf("masked.service UMask = %v, want 27", got)
+	}
+	for _, unitName := range []string{"wide.service", "huge.service"} {
+		if err := set.Errors[name(t, unitName)]; err == nil || !strings.Contains(err.Error(), "0..0777") {
+			t.Errorf("%s error = %v, want an out-of-range umask error", unitName, err)
+		}
 	}
 }

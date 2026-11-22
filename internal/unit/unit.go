@@ -192,7 +192,7 @@ type ServiceConfig struct {
 	Nice                     *int
 	IOSchedulingClass        *int
 	IOSchedulingPriority     *int
-	UMask                    *int
+	UMask                    *UMask
 	Directories              Directories
 }
 
